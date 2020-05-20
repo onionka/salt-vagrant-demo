@@ -1,0 +1,46 @@
+---
+driver:
+  name: vagrant
+
+platforms:
+  - name: ubuntu-18.04
+  - name: centos-7
+
+verifier:
+  name: shell
+  remote_exec: false
+  command: pytest -v test/integration/test_$KITCHEN_SUITE.py
+
+suites:
+  - name: apache
+    provisioner:
+      name: salt_solo
+      salt_install: bootstrap
+      salt_version: latest
+      salt_bootstrap_url: https://bootstrap.saltstack.com
+      salt_bootstrap_options: -X -p git -p curl -p sudo
+      salt_copy_filter:
+        - .git
+        - .kitchen
+        - .vagrant
+        - .pytest_cache
+      is_file_root: True
+      local_salt_root: '.'
+      require_chef: false
+      pillars_from_files:
+        default.sls: pillar/default.sls
+        users.sls: pillar/users.sls
+        apache_demo.sls: pillar/apache_demo.sls
+      #state_top_from_file: True
+      state_top:
+        base:
+          'default':
+            - apache_demo
+      pillars:
+        top.sls:
+          base:
+            '*':
+              - default
+              - users
+            'minion2':
+              - apache_demo

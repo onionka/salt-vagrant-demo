@@ -1,0 +1,61 @@
+{%- for key, container_config in service_config.containers | dictsort if container_config['http'] is defined %}
+upstream {{ service_name }} {
+{%- for container_number in range(container_config['instances']) -%}
+{%- set container_instance_name = service_name ~ "-" ~ key ~ "-" ~ container_number %}
+  server localhost:{{ container_config['base_port'] + container_number }};
+{%- endfor %}
+}
+{%- endfor %}
+
+server {
+  listen 80;
+
+  server_name {{ service_config["hostname"] }} {{ service_name }}.service.consul;
+
+  access_log /var/log/services/{{ service_name }}/access.log combined;
+
+{% if "ssl_certificate" in service_config and service_config['ssl_force'] | default(true) %}
+  return 301 https://$host$request_uri;
+{% else %}
+  location / {
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+
+    proxy_pass http://{{ service_name }};
+  }
+{% endif %}
+}
+
+{% if "ssl_certificate" in service_config %}
+server {
+  listen 443;
+
+  server_name {{ service_config["hostname"] }} {{ service_name }}.service.consul;
+
+  access_log /var/log/services/{{ service_name }}/access.log combined;
+
+  ssl_certificate {{ service_config["ssl_certificate"] }};
+  ssl_certificate_key {{ service_config["ssl_key"] }};
+
+  ssl on;
+
+{% if service_config['ssl_force'] | default(true) %}
+  add_header Strict-Transport-Security max-age=31536000;
+{% endif %}
+
+  location / {
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+
+    proxy_pass http://{{ service_name }};
+  }
+}
+{% endif %}

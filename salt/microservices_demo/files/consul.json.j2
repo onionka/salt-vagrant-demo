@@ -1,0 +1,19 @@
+{
+    'service': {
+        'name': {{ service_name }},
+        'id': {{ service_id }},
+        'port': {{ host_port }},
+        'checks': [
+            {
+                'name': "HTTP connectivity",
+                'http': "http://localhost:{{ host_port }}{{ check_url }}",
+                'interval': "1m"
+            }{%- if checks -%}
+            ,
+            {%- endif -%}
+          {% for check in checks -%}
+            {{ tojson(check, 3) }}
+          {%- endfor %}
+        ]
+    }
+}

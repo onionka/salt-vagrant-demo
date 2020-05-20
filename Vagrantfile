@@ -14,22 +14,30 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         vb.cpus = 1
         vb.name = "master"
     end
-    
+
     master_config.vm.box = "#{os}"
     master_config.vm.host_name = 'saltmaster.local'
     master_config.vm.network "private_network", ip: "#{net_ip}.10"
-    master_config.vm.synced_folder "saltstack/salt/", "/srv/salt"
-    master_config.vm.synced_folder "saltstack/pillar/", "/srv/pillar"
+    master_config.vm.synced_folder "salt/", "/srv/salt"
+    master_config.vm.synced_folder "pillar/", "/srv/pillar"
+
+    master_config.vm.provision :shell do |shell|
+        shell.inline = "set -ex; \
+          apt-get -y install git zsh; \
+          sudo chsh -s /bin/zsh vagrant; \
+          git clone git://github.com/robbyrussell/oh-my-zsh.git /home/vagrant/.oh-my-zsh; \
+          cp /home/vagrant/.oh-my-zsh/templates/zshrc.zsh-template /home/vagrant/.zshrc"
+    end
 
     master_config.vm.provision :salt do |salt|
-      salt.master_config = "saltstack/etc/master"
-      salt.master_key = "saltstack/keys/master_minion.pem"
-      salt.master_pub = "saltstack/keys/master_minion.pub"
-      salt.minion_key = "saltstack/keys/master_minion.pem"
-      salt.minion_pub = "saltstack/keys/master_minion.pub"
+      salt.master_config = "etc/master"
+      salt.master_key = "keys/master_minion.pem"
+      salt.master_pub = "keys/master_minion.pub"
+      salt.minion_key = "keys/master_minion.pem"
+      salt.minion_pub = "keys/master_minion.pub"
       salt.seed_master = {
-                          "minion1" => "saltstack/keys/minion1.pub",
-                          "minion2" => "saltstack/keys/minion2.pub"
+                          "minion1" => "keys/minion1.pub",
+                          "minion2" => "keys/minion2.pub"
                          }
 
       salt.install_type = "stable"
@@ -57,10 +65,18 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       minion_config.vm.hostname = "#{vmname}"
       minion_config.vm.network "private_network", ip: "#{ip}"
 
+      minion_config.vm.provision :shell do |shell|
+        shell.inline = "set -ex; \
+          apt-get -y install git zsh; \
+          sudo chsh -s /bin/zsh vagrant; \
+          git clone git://github.com/robbyrussell/oh-my-zsh.git /home/vagrant/.oh-my-zsh; \
+          cp /home/vagrant/.oh-my-zsh/templates/zshrc.zsh-template /home/vagrant/.zshrc"
+      end
+
       minion_config.vm.provision :salt do |salt|
-        salt.minion_config = "saltstack/etc/#{vmname}"
-        salt.minion_key = "saltstack/keys/#{vmname}.pem"
-        salt.minion_pub = "saltstack/keys/#{vmname}.pub"
+        salt.minion_config = "etc/#{vmname}"
+        salt.minion_key = "keys/#{vmname}.pem"
+        salt.minion_pub = "keys/#{vmname}.pub"
         salt.install_type = "stable"
         salt.verbose = true
         salt.colorize = true
