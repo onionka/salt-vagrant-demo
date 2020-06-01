@@ -1,7 +1,7 @@
 include:
   - oh-my-zsh.zsh
 
-{% set users = salt.pillar.get("users") %}
+{% set users = pillar["users"] %}
 {% for username, user in users.items() %}
 {% set user_home_folder = "/home/" + username %}
 
@@ -19,7 +19,7 @@ clone_oh_my_zsh_repo_{{ username }}:
 zshrc_{{ username }}:
   file.managed:
     - name: "{{ user_home_folder }}/.zshrc"
-    - source: salt://oh-my-zsh/.zshrc
+    - source: salt://oh-my-zsh/files/.zshrc
     - user: {{ username }}
     - mode: '0644'
 
